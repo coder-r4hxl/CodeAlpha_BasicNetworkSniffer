@@ -6,6 +6,7 @@ Designed for network analysis, debugging, and educational security research with
 
 ## Purpose & Verified Features
 
+- **Network Interface Discovery & Validation:** Enumerates real local network interfaces, displaying name, description, index, MAC address, IPv4, IPv6 addresses, and status where supported. Pre-validates interfaces before initiating capture.
 - **Metadata-Only Default Output:** By default, only non-sensitive packet metadata (timestamp, protocol, IP addresses, ports, total length) is printed and logged.
 - **Opt-in Payload Preview (`--show-payload`):** Explicit flag to enable safe ASCII-sanitized payload previews (first 64 bytes, control characters replaced with `.`).
 - **Protocol & Port Filtering:** BPF filter support for TCP, UDP, ICMP, and specific port bounds (1–65535).
@@ -43,15 +44,27 @@ pip install -r requirements.txt
 ```bash
 python3 sniffer.py --list-interfaces
 ```
-Output:
+Sample Output:
 ```
-eth0
-lo
-docker0
+Available Network Interfaces:
+[1] Name: eth0
+    Description: Ethernet Adapter
+    Index: 2
+    MAC Address: 06:00:c0:a8:00:02
+    IPv4 Address: 192.168.0.2
+    IPv6 Address: fe80::400:c0ff:fea8:2
+    Status: unavailable
+[2] Name: lo
+    Description: Loopback
+    Index: 1
+    MAC Address: 00:00:00:00:00:00
+    IPv4 Address: 127.0.0.1
+    IPv6 Address: ::1
+    Status: unavailable
 ```
 
 ### 2. Basic Capture (Metadata-Only Default)
-Capture 5 TCP packets on port 443:
+Capture 5 TCP packets on port 443 on interface `eth0`:
 ```bash
 sudo python3 sniffer.py -i eth0 -p tcp --port 443 -c 5
 ```
@@ -111,10 +124,11 @@ Automated continuous integration runs on GitHub Actions via `.github/workflows/c
 
 ## How It Works
 
-1. **Packet Capture:** Uses Scapy's `sniff()` function to hook into OS network sockets and receive raw frames.
-2. **BPF Filtering:** Constructs Berkeley Packet Filters (`tcp`, `udp`, `icmp`, `port <N>`) at the socket layer to minimize overhead.
-3. **Safe Parsing:** Decodes IP headers, extracts transport ports, maps protocol numbers (including fragment fallbacks), and formats output.
-4. **Sanitization & Privacy:** Sanitizes binary payloads into printable ASCII (range 32–126), masking control sequences as `.`. Payload output is omitted unless `--show-payload` is supplied.
+1. **Interface Discovery & Pre-Validation:** Retrieves interface metadata via Scapy's socket dictionaries (`conf.ifaces`) and verifies that user-specified interfaces exist before opening capture sockets.
+2. **Packet Capture:** Uses Scapy's `sniff()` function to hook into OS network sockets and receive raw frames.
+3. **BPF Filtering:** Constructs Berkeley Packet Filters (`tcp`, `udp`, `icmp`, `port <N>`) at the socket layer to minimize overhead.
+4. **Safe Parsing:** Decodes IP headers, extracts transport ports, maps protocol numbers (including fragment fallbacks), and formats output.
+5. **Sanitization & Privacy:** Sanitizes binary payloads into printable ASCII (range 32–126), masking control sequences as `.`. Payload output is omitted unless `--show-payload` is supplied.
 
 ## Privacy, Ethical Use & Legal Warning
 
