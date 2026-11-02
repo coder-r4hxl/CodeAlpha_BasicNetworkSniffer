@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 from datetime import datetime
-from scapy.all import sniff, get_if_list, conf
+from scapy.all import sniff, get_if_list
 from scapy.error import Scapy_Exception
 from parser import parse_packet, format_packet
 
@@ -169,115 +169,14 @@ def write_log(out_file, filepath, line):
         raise StopCapture()
 
 
-def get_interface_details():
-    """Retrieve detailed metadata for all available network interfaces.
-
-    Returns:
-        list of dict: Interface details including name, description, index, MAC, IPv4, IPv6, status.
-    """
-    try:
-        iface_names = get_if_list()
-    except Exception as e:
-        print(f"Error: failed to enumerate network interfaces: {e}")
-        sys.exit(1)
-
-    if not iface_names:
-        return []
-
-    results = []
-    scapy_ifaces = getattr(conf, "ifaces", {})
-
-    for name in iface_names:
-        dev = scapy_ifaces.get(name)
-        if dev is None:
-            for iface_obj in scapy_ifaces.values():
-                if getattr(iface_obj, "name", None) == name:
-                    dev = iface_obj
-                    break
-
-        desc = getattr(dev, "description", None) if dev else None
-        index = getattr(dev, "index", None) if dev else None
-        mac = getattr(dev, "mac", None) if dev else None
-        ip_v4 = getattr(dev, "ip", None) if dev else None
-        status = getattr(dev, "status", None) if dev else None
-
-        ipv6_list = []
-        if dev and hasattr(dev, "ips"):
-            ips_dict = getattr(dev, "ips")
-            if isinstance(ips_dict, dict) and 6 in ips_dict:
-                ipv6_list = [str(x) for x in ips_dict[6] if x]
-
-        results.append({
-            "name": name,
-            "description": desc or "unavailable",
-            "index": index if index is not None else "unavailable",
-            "mac": mac or "unavailable",
-            "ipv4": ip_v4 or "unavailable",
-            "ipv6": ", ".join(ipv6_list) if ipv6_list else "unavailable",
-            "status": status or "unavailable",
-        })
-    return results
-
-
-def format_interfaces_output(iface_list):
-    """Format interface list into a human-readable string.
-
-    Args:
-        iface_list (list of dict): List of interface metadata dictionaries.
-
-    Returns:
-        str: Formatted interface listing output.
-    """
-    if not iface_list:
-        return "No network interfaces found."
-
-    lines = ["Available Network Interfaces:"]
-    for idx, item in enumerate(iface_list, start=1):
-        lines.append(f"[{idx}] Name: {item['name']}")
-        lines.append(f"    Description: {item['description']}")
-        lines.append(f"    Index: {item['index']}")
-        lines.append(f"    MAC Address: {item['mac']}")
-        lines.append(f"    IPv4 Address: {item['ipv4']}")
-        lines.append(f"    IPv6 Address: {item['ipv6']}")
-        lines.append(f"    Status: {item['status']}")
-    return "\n".join(lines)
-
-
-def validate_interface(interface_name):
-    """Validate that the specified interface exists on the system before capture.
-
-    Args:
-        interface_name (str or None): Network interface name to check.
-
-    Returns:
-        bool: True if valid or None, exits with code 1 if invalid.
-    """
-    if interface_name is None:
-        return True
-
-    try:
-        available = get_if_list()
-    except Exception as e:
-        print(f"Error: failed to enumerate network interfaces: {e}")
-        sys.exit(1)
-
-    if interface_name not in available:
-        print(f"Error: invalid interface '{interface_name}'.")
-        sys.exit(1)
-
-    return True
-
-
 def main():
     """Main entry point for the network sniffer application."""
     args = parse_args()
 
     if args.list_interfaces:
-        ifaces = get_interface_details()
-        print(format_interfaces_output(ifaces))
+        for iface in get_if_list():
+            print(iface)
         sys.exit(0)
-
-    validate_interface(args.interface)
 
     bpf = build_bpf_filter(args.protocol, args.port)
 
