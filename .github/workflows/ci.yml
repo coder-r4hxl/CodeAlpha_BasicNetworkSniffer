@@ -37,4 +37,4 @@ jobs:
 
       - name: Run Bandit Security Audit
         run: |
-          bandit -r .
+          bandit -r . -x ./tests

@@ -225,7 +225,7 @@ def main():
             "Error: administrator/root privileges required. Use sudo (Linux/macOS) or run as Administrator (Windows)."
         )
         exit_code = 1
-    except (OSError, Scapy_Exception, ValueError):
+    except (OSError, Scapy_Exception):
         print(f"Error: invalid interface '{args.interface}'.")
         exit_code = 1
     finally:
